@@ -389,24 +389,24 @@ macro "part" id:Parser.ident ":" type:term ":=" val:term : command =>
 
 ---------------------------------------------------------------------------
 
-abbrev Fuel := ℕ
+-- abbrev Fuel := ℕ
 
-def withFuel {α β : Type} (F : (α → Option β) → α → Option β) : Fuel → α → Option β :=
-  fun n a => match n with
-  | 0 => none
-  | n + 1 => F (withFuel F n) a
+-- def withFuel {α β : Type} (F : (α → Option β) → α → Option β) : Fuel → α → Option β :=
+--   fun n a => match n with
+--   | 0 => none
+--   | n + 1 => F (withFuel F n) a
 
 syntax (name := partdef) "partdef" Parser.ident ":" term ":=" term : command
 
--- open Lean Meta in
--- def mkFunctional (name : Name) (body : Expr) (type : Expr) : MetaM Expr :=
---   withLocalDecl name .default type (fun e => do mkLambdaFVars #[e] body)
+-- -- open Lean Meta in
+-- -- def mkFunctional (name : Name) (body : Expr) (type : Expr) : MetaM Expr :=
+-- --   withLocalDecl name .default type (fun e => do mkLambdaFVars #[e] body)
 
 def mkFunctionalName (name : Name) : Name :=
   name ++ `functional
 
-def mkWithFuelName (name : Name) : Name :=
-  name ++ `fueled
+-- def mkWithFuelName (name : Name) : Name :=
+--   name ++ `fueled
 
 open Lean Meta in
 def addFunctional (name : Name) (type : TSyntax `term) (val : TSyntax `term) : TermElabM Unit := do
@@ -426,16 +426,16 @@ def addFunctional (name : Name) (type : TSyntax `term) (val : TSyntax `term) : T
 
 #print Expr
 
-def addWithFuel (name : Name) (type : Expr) : TermElabM Unit := do
-  let decl := Declaration.defnDecl {
-    name := mkWithFuelName name
-    levelParams := []
-    type := ← Lean.mkArrow (mkConst `Fuel []) type
-    value := ← Meta.mkAppM (`withFuel) #[mkConst (mkFunctionalName name) []]
-    hints := default
-    safety := .safe
-  }
-  addDecl decl
+-- def addWithFuel (name : Name) (type : Expr) : TermElabM Unit := do
+--   let decl := Declaration.defnDecl {
+--     name := mkWithFuelName name
+--     levelParams := []
+--     type := ← Lean.mkArrow (mkConst `Fuel []) type
+--     value := ← Meta.mkAppM (`withFuel) #[mkConst (mkFunctionalName name) []]
+--     hints := default
+--     safety := .safe
+--   }
+--   addDecl decl
 
 #print Command.declId
 open Lean Elab Term
@@ -445,11 +445,13 @@ liftTermElabM do
   | `(command| partdef $id:ident : $type:term := $val:term) =>
 
     addFunctional id.raw.getId type val
-    addWithFuel id.raw.getId (← elabTermAndSynthesize type none)
+    -- addWithFuel id.raw.getId (← elabTermAndSynthesize type none)
   | _ => throwUnsupportedSyntax
 #check elabDeclaration
-whatsnew in
-partdef x : Nat → Option (List Nat) := fun n => do return n :: (← x n)
+
+
+-- whatsnew in
+-- partdef col : Nat → Nat
 
 whatsnew in
 partdef collatz : Nat → Option (List Nat) := fun n => do
@@ -460,9 +462,12 @@ partdef collatz : Nat → Option (List Nat) := fun n => do
   else
     return n :: (← collatz (3 * n + 1))
 
+def Succ (x : Option Nat) : Option Nat := x.map Nat.succ
 
-#reduce collatz.fueled 10 9
-
-/-
-  partdef f : Nat → Nat → List Nat := fun n m => n :: m :: f n m
--/
+whatsnew in
+partdef collatz' : Option Nat → Option Nat :=
+  fun n => do
+    if Even (← n) then
+      Succ (collatz' <| pure ((← n) / 2))
+    else
+      Succ (collatz' <| pure (3 * (← n) / 2))

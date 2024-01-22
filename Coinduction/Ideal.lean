@@ -30,24 +30,4 @@ def IdealBot : Order.Ideal α := Order.Ideal.principal ⊥
 
 #synth PartialOrder (Order.Ideal α)
 
-#check Order.Ideal.instPartialOrderIdeal
 
-#check Order.Ideal.instOrderBotIdealToLEToPreorderInstPartialOrderIdeal
-
-
-#print Order.Ideal
-
-
-def IsTheorem (Γ) (φ : Formula) := Nonempty (Proof Γ φ)
-
-def f {p q} : p ∨ q → Nat := 
-
-def usedPremises : Proof Γ φ → Set Formula
-  | premise ψ => {ψ}
-  ...
-
-def toFinitePremises (p : Proof Γ φ) : Proof (usedPremises p) φ :=
-  match p with
-  | ...
-
-Δ ⊆ Γ → Proof Δ φ → Proof Γ φ

@@ -3,6 +3,7 @@ import Coinduction.CompletePartialOrder
 import Coinduction.Embedding
 import Mathlib.Order.CompletePartialOrder
 import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.Set.Finite
 
 set_option autoImplicit false
 
@@ -18,13 +19,13 @@ lemma eq_node {a : α} {f f' : β a → Container β} : Container.node a f = Con
   . intros h ; rw [h]
 
 
-inductive WellFormedContainer {α : Type} {β : α → Type} : Container β → Type
+inductive WellFormedContainer {α : Type} {β : α → Type} : Container β → Prop where
 | bottom : WellFormedContainer .bottom
 | node (a : α) (f : β a → Container β) :
-  (∀ b, WellFormedContainer (f b)) → Fintype {a // f a ≠ Container.bottom} → WellFormedContainer (.node a f)
+  (∀ b, WellFormedContainer (f b)) → Set.Finite {a | f a ≠ Container.bottom} → WellFormedContainer (.node a f)
 
 
-abbrev FiniteContainer {α : Type} (β : α → Type) := {c : Container β // Nonempty <| WellFormedContainer c}
+abbrev FiniteContainer {α : Type} (β : α → Type) := {c : Container β // WellFormedContainer c}
 
 
 instance : Bot (Container β) where
@@ -89,139 +90,106 @@ inductive DefinitionOrder : Container β → Container β → Prop where
 def FiniteContainer.DefinitionOrder : FiniteContainer β → FiniteContainer β → Prop :=
   fun c₁ c₂ => _root_.DefinitionOrder c₁.val c₂.val
 
-instance : Bot (FiniteContainer β) where
-  bot := ⟨.bottom, ⟨.bottom⟩⟩
+instance Container.instBot : Bot (FiniteContainer β) where
+  bot := ⟨.bottom, .bottom⟩
 
 theorem eq_of_definition_order {a₁ a₂ : α} {f₁ : β a₁ → Container β} {f₂ : β a₂ → Container β} :
   DefinitionOrder (.node a₁ f₁) (.node a₂ f₂) → a₁ = a₂ := by
   intros h ; cases h ; rfl
 
 
-theorem WellFormedContainer.le_refl {c : Container β} (wf : WellFormedContainer c) :
+theorem Container.le_refl {c : Container β} :
   DefinitionOrder c c := by
-  induction wf with
+  induction c with
   | bottom =>
-    apply DefinitionOrder.bot_le
-  | node a f h h' ih =>
+    constructor
+  | node a f ih =>
     constructor
     exact ih
 
+theorem Container.le_antisymm (c₁ c₂ : Container β) :
+  DefinitionOrder c₁ c₂ → DefinitionOrder c₂ c₁ → c₁ = c₂ := by
+  intros h₁₂
+  induction h₁₂ with
+  | bot_le =>
+    intros h₂₁
+    cases h₂₁
+    rfl
+  | @node_le a f f' h ih =>
+    intros h₂₁
+    rcases h₂₁ with h₂₁
+    cases h₂₁ with | node_le h₂₁ =>
+    congr
+    ext b
+    exact ih _ (h₂₁ b)
 
-theorem WellFormedContainer.le_trans
-  {c₁ c₂ c₃ : Container β}
-  (wf₁ : WellFormedContainer c₁) (wf₂ : WellFormedContainer c₂) (wf₃ : WellFormedContainer c₃)
-  : DefinitionOrder c₁ c₂ → DefinitionOrder c₂ c₃ → DefinitionOrder c₁ c₃ :=
-  match wf₁, wf₂, wf₃ with
-  | .bottom, _, _ => fun _ _ => .bot_le
-  | .node a₁ f₁ h₁' h₁, .bottom, c₃ => by intros h h' ; cases h' ; cases h
-  | _, _, .bottom => fun h h' => by cases h' ; cases h ; constructor
-  | .node a₁ f₁ h₁' h₁, .node a₂ f₂ h₂' h₂, .node a₃ f₃ h₃' h₃ => by
-    intros h h'
-    have := eq_of_definition_order h
-    subst this
-    have := eq_of_definition_order h'
-    subst this
-    cases h with | @node_le _ _ _ h =>
-    cases h' with | @node_le _ _ _ h' =>
+theorem Container.le_trans (c₁ c₂ c₃ : Container β) :
+  DefinitionOrder c₁ c₂ → DefinitionOrder c₂ c₃ → DefinitionOrder c₁ c₃ := by
+  intros h₁₂
+  induction h₁₂ generalizing c₃ with
+  | bot_le =>
+    intros ; constructor
+  | @node_le a f f' h ih =>
+    intros h₂₃
+    cases h₂₃
+    rename_i f'' h₂₃
     constructor
     intros b
-    specialize h b
-    specialize h' b
-    exact WellFormedContainer.le_trans (h₁' b) (h₂' b) (h₃' b) h h'
-  -- | _, _, _ => sorry
-
-theorem WellFormedContainer.le_antisymm
-  {c₁ c₂ : Container β}
-  (wf₁ : WellFormedContainer c₁) (wf₂ : WellFormedContainer c₂) :
-  DefinitionOrder c₁ c₂ → DefinitionOrder c₂ c₁ → c₁ = c₂ :=
-  match wf₁, wf₂ with
-  | .node a₁ f₁ h₁ h₁', .node a₂ f₂ h₂ h₂' => by
-    intros h h'
-    have := eq_of_definition_order h
-    subst this
-    cases h with | node_le h =>
-    cases h' with | node_le h' =>
-    apply eq_node.2
-    ext b
-    exact WellFormedContainer.le_antisymm (h₁ b) (h₂ b) (h b) (h' b)
-  | _, .bottom => by
-    intros h h'
-    cases h ; rfl
-  | .bottom, _ => by
-    intros h h'
-    cases h' ; rfl
-
-theorem FiniteContainer.le_refl {c : FiniteContainer β} :
-  FiniteContainer.DefinitionOrder c c :=
-  WellFormedContainer.le_refl c.2.some
-
-theorem FiniteContainer.le_antisymm
-  {c₁ c₂ : FiniteContainer β} : FiniteContainer.DefinitionOrder c₁ c₂ → FiniteContainer.DefinitionOrder c₂ c₁ → c₁ = c₂ :=
-  fun h h' => by
-    let wf₁ := c₁.2.some
-    let wf₂ := c₂.2.some
-    have := WellFormedContainer.le_antisymm wf₁ wf₂ h h'
-    ext
-    exact this
+    exact ih _ _ (h₂₃ b)
 
 
-theorem FiniteContainer.le_trans
-  {c₁ c₂ c₃ : FiniteContainer β} : FiniteContainer.DefinitionOrder c₁ c₂ → FiniteContainer.DefinitionOrder c₂ c₃ → FiniteContainer.DefinitionOrder c₁ c₃ :=
-  fun h h' => WellFormedContainer.le_trans (c₁.2.some) (c₂.2.some) (c₃.2.some) h h'
-
-
-instance : PartialOrder (FiniteContainer β) where
-  le := FiniteContainer.DefinitionOrder
-  le_refl := fun _ => FiniteContainer.le_refl
-  le_antisymm := fun _ _ h h' => FiniteContainer.le_antisymm h h'
-  le_trans := fun _ _ _ h h' => FiniteContainer.le_trans h h'
-
-
-
-
-
-    -- match c₁, c₂, c₃ with
-    -- | .bottom, _, _ => fun _ _ => .bot_le
-    -- | .node a₁ f₁, .bottom, c₃ => by intros h h' ; cases h' <;> cases h
-    -- | .node a₁ f₁, .node a₂ f₂, .node a₃ f₃ => by
-    --   intros h h'
-    --   have := eq_of_definition_order h
-    --   subst this
-    --   have := eq_of_definition_order h'
-    --   subst this
-    --   cases h with | @node_le _ _ _ h =>
-    --   cases h'
-    --   constructor
-
-
-
+instance Container.partialOrder : PartialOrder (Container β) where
+  le := DefinitionOrder
+  le_refl := fun _ => Container.le_refl
+  le_antisymm := fun _ _ h h' => Container.le_antisymm _ _ h h'
+  le_trans := fun _ _ _ h h' => Container.le_trans _ _ _ h h'
 
 theorem FiniteContainer.bot_le {c : FiniteContainer β} :
-  ⊥ ≤ c := @_root_.DefinitionOrder.bot_le _ _ _
+  ⊥ ≤ c := @DefinitionOrder.bot_le _ _ _
 
 instance : OrderBot (FiniteContainer β) where
   bot_le := fun _ => FiniteContainer.bot_le
 
-abbrev FiniteConstructor (β : α → Type) (a : α) := {f : β a → FiniteContainer β // Finite {a // f a ≠ ⊥}}
+-- Fₐᵒ
+abbrev FiniteConstructor (β : α → Type) (a : α) :=
+  {f : β a → FiniteContainer β // Set.Finite {a | f a ≠ ⊥}}
 
 variable {a : α}
 
-
 instance {a : α} : Bot (FiniteConstructor β a) where
-  bot := ⟨fun _ => ⊥, sorry⟩
+  bot := ⟨fun _ => ⊥, by simp only [ne_eq, not_true, Set.setOf_false, Set.finite_empty]⟩
 
 instance : OrderBot (FiniteConstructor β a) where
   bot_le := fun f b => FiniteContainer.bot_le
 
+example {f g : FiniteConstructor β a} : f ≤ g ↔ f.1 ≤ g.1 := by
+  simp_all only [ne_eq, Subtype.coe_le_coe]
 
-def node' (a : α) (f : FiniteConstructor β a) : FiniteContainer β :=
-  ⟨.node a (fun b => (f.1 b).1), ⟨.node a (fun b => (f.1 b).1) (fun b => (f.1 b).2.some) sorry⟩⟩
+example {f g : FiniteConstructor β a} : f ≤ g ↔ ∀ b, f.1 b ≤ g.1 b := by
+  aesop?
+
+theorem FiniteContainer.coe_injective (c₁ c₂ : FiniteContainer β) : c₁ ≠ c₂ ↔ (↑c₁ : Container β) ≠ ↑c₂ := by
+  constructor
+  . aesop?
+  . aesop?
+
+-- nodeₐᵒ  : Fₐᵒ → Cᵒ
+def node' (a : α) : FiniteConstructor β a → FiniteContainer β :=
+  fun f => ⟨
+    .node a (fun b => (f.1 b).1),
+    by
+      constructor
+      . intros b
+        exact f.1 b |>.2
+      . have := f.2
+        have : (⊥ : FiniteContainer β).val = Container.bottom := rfl
+        rw [← this]
+        simp_rw [← FiniteContainer.coe_injective]
+        assumption
+  ⟩
 
 theorem node'_mono : Monotone (node' a (β := β)) :=
-  fun f₁ f₂ hle => DefinitionOrder.node_le hle
-
-
-
+  fun _ _ hle => DefinitionOrder.node_le hle
 
 variable (C : Type) [AlgebraicCompletePartialOrder C] (Comp : AlgebraicCompletePartialOrder.Embedding (FiniteContainer β) C)
 
@@ -232,5 +200,3 @@ instance : OrderBot (Constructor C β a) := inferInstance
 instance : CompletePartialOrder (Constructor C β a) := sorry
 
 instance : AlgebraicCompletePartialOrder (Constructor C β a) := sorry
-
-example : CompletePartialOrder.Compacts (C)

@@ -15,7 +15,7 @@ lemma injective_of_bimonotone {α : Type*} [PartialOrder α] {β : Type*} [Parti
   fun h_bimono a a' h_eq ↦ le_antisymm ((h_bimono a a').mpr (by rw [h_eq])) ((h_bimono a' a).mpr (by rw [h_eq]))
 
 
-structure Embedding (α : Type*) [PartialOrder α] [OrderBot α] (β : Type*) [AlgebraicCompletePartialOrder β] where
+structure Completion (α : Type*) [PartialOrder α] [OrderBot α] (β : Type*) [AlgebraicCompletePartialOrder β] where
   toFun : α → β
   to_fun_bot : toFun ⊥ = ⊥
   to_fun_bimono : Bimonotone toFun
@@ -29,9 +29,9 @@ variable {α : Type*} [PartialOrder α] [OrderBot α] {β : Type*} [AlgebraicCom
 
 #check OrderIso
 
-variable (e : Embedding α β)
+variable (e : Completion α β)
 
-lemma embedding_injective : Function.Injective e.toFun :=
+lemma completion_injective : Function.Injective e.toFun :=
   injective_of_bimonotone e.toFun e.to_fun_bimono
 
 open CompletePartialOrder (IsCompactElement CompactsLe)
@@ -77,5 +77,3 @@ lemma embedding_le (b₁ b₂ : β) :
     have := @CompletePartialOrder.forall_exists_le_iff_sSup_le_sSup _ _ (CompactsLe b₁) (CompactsLe b₂) sorry sorry sorry sorry |>.mpr h_b_le
     sorry
   . sorry
-
-
