@@ -77,7 +77,7 @@ section
   lemma compact_support_of_compact {f : (i : ι) → α i} : IsCompactElement f → Set.Finite (support f) := by
     intros hf_comp
     simp [IsCompactElement] at hf_comp
-    
+
 
 
 

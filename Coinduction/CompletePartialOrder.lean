@@ -106,6 +106,100 @@ def IsRestrictionOnSupport {α β : Type} [Bot β] (f g : α → β) : Prop :=
 def finiteRestrictions {α β : Type} [Bot β] (g : α → β) : Set (α → β) :=
   {f | Set.Finite (support f) ∧ IsRestrictionOnSupport f g}
 
+section FiniteRestrictions
+
+  variable {α : Type} {β : Type} [PartialOrder β] [OrderBot β]
+
+  lemma finite_restrictions_ne (g : α → β) :
+    Set.Nonempty (finiteRestrictions g) := by
+    use fun _ => ⊥
+    -- simp? [finiteRestrictions]
+    constructor
+    . simp? [support]
+    . simp? [IsRestrictionOnSupport]
+      constructor
+      . simp? [support]
+      . intros a hmem
+        contradiction
+
+
+  open Classical in
+  noncomputable def imp (b₁ b₂ : β) := if b₁ = ⊥ then b₂ else b₁
+
+  attribute [simp] imp in
+
+  lemma finite_restrictions_directed (g : α → β) :
+    DirectedOn (. ≤ .) (finiteRestrictions g) := by
+    intros f' hmem_f' g' hmem_g'
+    use fun a => imp (f' a) (g' a)
+    constructor <;> constructor
+    . sorry
+    . constructor
+      . rintro a hmem_a
+        simp? [support] at hmem_a ⊢
+        by_cases h : f' a = ⊥
+        . simp_rw [h] at hmem_a
+          simp only [ite_true] at hmem_a
+          simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g'
+          aesop?
+        . by_cases h' : g' a = ⊥
+          . simp_rw [h, ite_false] at hmem_a
+            simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g'
+            have := hmem_g'.2.2 a
+            intros h''
+            rw [h''] at this
+
+
+
+
+
+
+      . intros a hmem_a
+        simp only [support, imp, ne_eq, Set.mem_setOf_eq] at hmem_a
+        simp? [finiteRestrictions, IsRestrictionOnSupport, support] at hmem_g'
+        dsimp only
+
+    . intros a
+      dsimp only
+      by_cases h : f' a = ⊥
+      . simp [h]
+      . simp [h]
+    . intros a
+      dsimp only
+      by_cases h : f' a = ⊥
+      . simp [h]
+      . simp [h]
+        by_cases h' : g' a = ⊥
+        . simp [h']
+        . simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_f' hmem_g'
+          rw [hmem_f'.2.2 a h]
+          rw [hmem_g'.2.2 a h']
+
+
+    -- constructor
+    -- . constructor
+    --   . sorry
+    --   . constructor
+    --   . rintro ⟨a, hmem_a⟩
+    --     simp? [support] at hmem_a
+    --     by_cases h : f' a = ⊥
+    --     . simp_rw [h] at hmem_a
+    --       simp? at hmem_a
+    --       exfalso
+    -- . constructor
+    --   . sorry
+
+
+
+
+
+
+
+
+
+end FiniteRestrictions
+
+
 section Pi
 
 variable {ι : Type} {α : ι → Type} [∀ i, CompletePartialOrder (α i)]
