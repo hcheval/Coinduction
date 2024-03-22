@@ -2,7 +2,8 @@ import Mathlib.Order.CompletePartialOrder
 import Mathlib.Order.UpperLower.Basic
 import Mathlib.Data.Set.Finite
 
-
+set_option autoImplicit true
+set_option relaxedAutoImplicit false
 
 namespace DirectedOn
 
@@ -96,109 +97,13 @@ namespace CompletePartialOrder
 
 end CompletePartialOrder
 
-def support {α : Type} {β : α → Type} [∀ a, Bot (β a)] (f : ∀ a, β a):=
+def support {α : Type} {β : α → Type} [∀ a, Bot (β a)] (f : ∀ a, β a) :=
   {a | f a ≠ ⊥}
 
-def IsRestrictionOnSupport {α β : Type} [Bot β] (f g : α → β) : Prop :=
-  support f ⊆ support g ∧
-  ∀ a ∈ support f, f a = g a
+lemma mem_support_iff {α : Type} {β : α → Type} [∀ a, Bot (β a)] (f : ∀ a, β a) :
+  ∀ a, a ∈ support f ↔ f a ≠ ⊥ := fun a => by simp? [support]
 
-def finiteRestrictions {α β : Type} [Bot β] (g : α → β) : Set (α → β) :=
-  {f | Set.Finite (support f) ∧ IsRestrictionOnSupport f g}
-
-section FiniteRestrictions
-
-  variable {α : Type} {β : Type} [PartialOrder β] [OrderBot β]
-
-  lemma finite_restrictions_ne (g : α → β) :
-    Set.Nonempty (finiteRestrictions g) := by
-    use fun _ => ⊥
-    -- simp? [finiteRestrictions]
-    constructor
-    . simp? [support]
-    . simp? [IsRestrictionOnSupport]
-      constructor
-      . simp? [support]
-      . intros a hmem
-        contradiction
-
-
-  open Classical in
-  noncomputable def imp (b₁ b₂ : β) := if b₁ = ⊥ then b₂ else b₁
-
-  attribute [simp] imp in
-
-  lemma finite_restrictions_directed (g : α → β) :
-    DirectedOn (. ≤ .) (finiteRestrictions g) := by
-    intros f' hmem_f' g' hmem_g'
-    use fun a => imp (f' a) (g' a)
-    constructor <;> constructor
-    . sorry
-    . constructor
-      . rintro a hmem_a
-        simp? [support] at hmem_a ⊢
-        by_cases h : f' a = ⊥
-        . simp_rw [h] at hmem_a
-          simp only [ite_true] at hmem_a
-          simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g'
-          aesop?
-        . by_cases h' : g' a = ⊥
-          . simp_rw [h, ite_false] at hmem_a
-            simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g'
-            have := hmem_g'.2.2 a
-            intros h''
-            rw [h''] at this
-
-
-
-
-
-
-      . intros a hmem_a
-        simp only [support, imp, ne_eq, Set.mem_setOf_eq] at hmem_a
-        simp? [finiteRestrictions, IsRestrictionOnSupport, support] at hmem_g'
-        dsimp only
-
-    . intros a
-      dsimp only
-      by_cases h : f' a = ⊥
-      . simp [h]
-      . simp [h]
-    . intros a
-      dsimp only
-      by_cases h : f' a = ⊥
-      . simp [h]
-      . simp [h]
-        by_cases h' : g' a = ⊥
-        . simp [h']
-        . simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_f' hmem_g'
-          rw [hmem_f'.2.2 a h]
-          rw [hmem_g'.2.2 a h']
-
-
-    -- constructor
-    -- . constructor
-    --   . sorry
-    --   . constructor
-    --   . rintro ⟨a, hmem_a⟩
-    --     simp? [support] at hmem_a
-    --     by_cases h : f' a = ⊥
-    --     . simp_rw [h] at hmem_a
-    --       simp? at hmem_a
-    --       exfalso
-    -- . constructor
-    --   . sorry
-
-
-
-
-
-
-
-
-
-end FiniteRestrictions
-
+-- example (s t : Set Nat) (h : s ⊆ t) (h' : t.Finite) : s.Finite := by exact?
 
 section Pi
 
@@ -333,13 +238,256 @@ lemma sSup_pi_eq_proj (hs_dir : ∀ i, DirectedOn (. ≤ .) (s i)) (hs_ne : ∀ 
 
 end Lemma16
 
-
-
-
-
-
-
-
-
-
 end Pi
+
+section
+  open Classical
+  #print DirectedOn
+
+  #print Set.toFinset
+
+  lemma Finset.insert_subset_set_iff {α} (a : α) (s : Finset α) (r : Set α) :
+    (insert a s).toSet ⊆ r ↔ insert a s.toSet ⊆ r := by aesop?
+
+  lemma finset_has_upper_of_subset_directed {α : Type} [PartialOrder α] (d : Set α) (hne : d.Nonempty) (hd : DirectedOn (. ≤ .) d)
+    (s : Finset α) : s.toSet ⊆ d → ∃ y ∈ d, ∀ x ∈ s, x ≤ y := by
+    induction s using Finset.induction with
+    | empty => aesop?
+    | @insert a s' hmem ih =>
+      intros h'
+      rw [Finset.insert_subset_set_iff] at h'
+      rw [Set.insert_subset_iff] at h'
+      rcases h' with ⟨h'_mem, h'_subset⟩
+      specialize ih h'_subset
+      choose y hy using ih
+      choose y' hy' using hd a h'_mem y hy.1
+      use y'
+      constructor
+      . exact hy'.1
+      . intros x h_mem_x
+        rw [Finset.mem_insert] at h_mem_x
+        rcases h_mem_x with h_eq_x_a | h_mem_x_s'
+        . aesop?
+        . have := hy.2 x h_mem_x_s'
+          exact le_trans this hy'.2.2
+
+
+  #print Set.Finite.toFinset
+
+  namespace CompletePartialOrder
+  lemma compact_of_finite_support_and_compact_values {α β : Type} [CompletePartialOrder β] [OrderBot β] {f : α → β}
+    : Set.Finite (support f) → (∀ a, IsCompactElement (f a)) → IsCompactElement f := by
+    intros h_fin_supp h_comp_val
+    rw [compact_iff_compact_on_lower_set]
+    intros d h_dir h_ne h_lower h_f_le_sSup
+    have : ∀ a, ∃ b, b ∈ d ⇓ a ∧ f a ≤ b := fun a ↦ h_comp_val a _ (proj_directed h_dir _) (proj_ne h_ne _) (h_f_le_sSup a)
+    choose g hb using this
+    have : ∀ a ∈ support f, (g a) ∈ d ⇓ a ∧ f a ≤ g a := by
+      intros a _
+      aesop?
+    have : ∀ a ∈ support f, ∃ φ ∈ d, f a ≤ φ a := by
+      intros a h_mem_a
+      specialize this _ h_mem_a
+      rcases this with ⟨⟨φ, h_mem_φ⟩, h_f_le_g⟩
+      use φ
+      rw [← h_mem_φ.2] at h_f_le_g
+      exact ⟨h_mem_φ.1, h_f_le_g⟩
+    choose φ hφ using this
+    let φ' : α → α → β := fun a ↦ if h : a ∈ support f then φ a h else ⊥
+    have hφ' : ∀ a ∈ support f, φ' a ∈ d ∧ f a ≤ φ' a a := by
+      intros a h_mem_a
+      simp? [*]
+    have h_supp_has_upper : (φ' '' (support f) ⊆ d)
+      → ∃ χ ∈ d, (∀ ψ ∈ φ' '' (support f), ψ ≤ χ) := by
+      have h_aux : Set.Finite (φ' '' (support f)) := sorry
+      have := finset_has_upper_of_subset_directed d h_ne h_dir (Set.Finite.toFinset h_aux)
+      rw [Set.Finite.coe_toFinset] at this
+      have h_aux' : ∀ x, x ∈ Set.Finite.toFinset h_aux ↔ x ∈ φ' '' (support f) := by simp?
+      sorry
+    have : φ' '' (support f) ⊆ d := by sorry
+    have ⟨χ, χ_mem, χ_upper⟩ := h_supp_has_upper this
+    use (fun a ↦ if a ∈ support f then φ' a a else ⊥)
+    constructor
+    . unfold IsLowerSet at h_lower
+      apply h_lower (a := χ) ?_ χ_mem
+      intros a
+      by_cases h_mem_supp : a ∈ support f
+      . simp only [h_mem_supp, dite_true, ite_true]
+        aesop?
+      . simp [h_mem_supp]
+    . intros a
+      by_cases h_mem_supp : a ∈ support f
+      . simp only [h_mem_supp, dite_true, ite_true]
+        specialize hφ' _ h_mem_supp
+        simp only [h_mem_supp, dite_true] at hφ'
+        exact hφ'.2
+      . simp only [h_mem_supp, dite_false, Pi.bot_apply, ite_self, le_bot_iff]
+        simp only [support, ne_eq, Set.mem_setOf_eq, not_not] at h_mem_supp
+        exact h_mem_supp
+
+  end CompletePartialOrder
+end
+
+def IsRestrictionOnSupport {α : Type} {β : α → Type} [∀ a, Bot (β a)] (f g : (a : α) → β a) : Prop :=
+  support f ⊆ support g ∧
+  ∀ a ∈ support f, f a = g a
+
+def finiteRestrictions {α : Type} {β : α → Type} [∀ a, Bot (β a)] (g : (a : α) → β a) : Set ((a : α) → β a) :=
+  {f | Set.Finite (support f) ∧ IsRestrictionOnSupport f g}
+
+section FiniteRestrictions
+
+  variable {α : Type} {β : Type} [CompletePartialOrder β] [OrderBot β]
+
+  open CompletePartialOrder
+
+  lemma finite_restrictions_ne (g : α → β) :
+    Set.Nonempty (finiteRestrictions g) := by
+    use fun _ => ⊥
+    -- simp? [finiteRestrictions]
+    constructor
+    . simp? [support]
+    . simp? [IsRestrictionOnSupport]
+      constructor
+      . simp? [support]
+      . intros a hmem
+        contradiction
+
+
+  open Classical in
+  noncomputable def imp  (b₁ b₂ : β) := if b₁ = ⊥ then b₂ else b₁
+
+  attribute [simp] imp in
+
+  lemma finite_restrictions_directed (g : α → β) :
+    DirectedOn (. ≤ .) (finiteRestrictions g) := by
+    intros f' hmem_f' g' hmem_g'
+    use fun a => imp (f' a) (g' a)
+    constructor <;> constructor
+    . sorry
+    . constructor
+      . rintro a hmem_a
+        simp? [support] at hmem_a ⊢
+        by_cases h : f' a = ⊥
+        . simp_rw [h] at hmem_a
+          simp only [ite_true] at hmem_a
+          simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g'
+          aesop?
+        . by_cases h' : g' a = ⊥
+          . simp_rw [h, ite_false] at hmem_a
+            simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g' hmem_f'
+            have := hmem_f'.2.2 a hmem_a
+            rwa [← this]
+          . simp_rw [h, ite_false] at hmem_a
+            simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_g' hmem_f'
+            rwa [← hmem_g'.2.2 a h']
+      . intros a hmem_a
+        simp only [support, imp, ne_eq, Set.mem_setOf_eq] at hmem_a
+        simp? [finiteRestrictions, IsRestrictionOnSupport, support] at hmem_g' hmem_f'
+        by_cases h : f' a = ⊥
+        . aesop?
+        . aesop?
+    . intros a
+      dsimp only
+      by_cases h : f' a = ⊥
+      . simp [h]
+      . simp [h]
+    . intros a
+      dsimp only
+      by_cases h : f' a = ⊥
+      . simp [h]
+      . simp [h]
+        by_cases h' : g' a = ⊥
+        . simp [h']
+        . simp only [finiteRestrictions, support, ne_eq, IsRestrictionOnSupport, Set.setOf_subset_setOf, Set.mem_setOf_eq] at hmem_f' hmem_g'
+          rw [hmem_f'.2.2 a h]
+          rw [hmem_g'.2.2 a h']
+
+
+    -- constructor
+    -- . constructor
+    --   . sorry
+    --   . constructor
+    --   . rintro ⟨a, hmem_a⟩
+    --     simp? [support] at hmem_a
+    --     by_cases h : f' a = ⊥
+    --     . simp_rw [h] at hmem_a
+    --       simp? at hmem_a
+    --       exfalso
+    -- . constructor
+    --   . sorry
+
+  open Classical in
+  lemma mem_finite_restrictions_of_bot_update (f : α → β) (a : α) :
+    (fun x => if x = a then f a else ⊥ : α → β) ∈ finiteRestrictions f := by
+    constructor
+    . by_cases h : f a = ⊥
+      . have : support (fun x => if x = a then f a else ⊥) = {} := by simp [support, *]
+        rw [this]
+        exact Set.finite_empty
+      . have : support (fun x => if x = a then f a else ⊥) = {a} := by simp [support, *]
+        rw [this]
+        exact Set.finite_singleton _
+    . constructor
+      . intros a' hmem_a'
+        simp? [support] at hmem_a'
+        simp? [support, *]
+      . intros a' hmem_a'
+        simp? [support] at hmem_a'
+        simp? [support, *]
+
+
+
+
+
+
+  lemma is_lub_finite_restrictions (f : α → β) :
+    IsLUB (finiteRestrictions f) f := by
+    constructor
+    . intros g hmem_g a
+      rcases hmem_g with ⟨hmem_g₁, hmem_g₂⟩
+      by_cases h : g a = ⊥
+      . rw [h] ; exact bot_le
+      . simp only [IsRestrictionOnSupport] at hmem_g₂
+        have := hmem_g₂.2 a (by aesop?)
+        rw [this]
+    . intros g hg_upper a
+      simp [upperBounds] at hg_upper
+      specialize hg_upper (mem_finite_restrictions_of_bot_update _ a)
+      specialize hg_upper a
+      simp only [ite_true] at hg_upper
+      exact hg_upper
+
+  #check DirectedOn.IsLUB.sSup_eq
+
+  lemma le_lub_finite_restrictions (f : α → β) :
+    f ≤ sSup (finiteRestrictions f) := by
+    rw [DirectedOn.IsLUB.sSup_eq (finite_restrictions_directed f) (is_lub_finite_restrictions f)]
+
+  lemma support.subset_of_le {f g : α → β} :
+    f ≤ g → support f ⊆ support g := by
+    intros h a ha
+    rw [mem_support_iff] at ha ⊢
+    intros h'
+    specialize h a
+    rw [h'] at h
+    have := eq_bot_iff.2 h
+    contradiction
+
+
+
+  lemma finite_support_of_compact {f : α → β} :
+    IsCompactElement f → Set.Finite (support f) := by
+    intros h_comp
+    unfold IsCompactElement at h_comp
+    have ⟨g, ⟨⟨h_finite_supp, _⟩, h_f_le_g⟩⟩ := h_comp _ (finite_restrictions_directed f) (finite_restrictions_ne f) (le_lub_finite_restrictions f)
+    have := support.subset_of_le h_f_le_g
+    exact Set.Finite.subset h_finite_supp this
+
+
+
+end FiniteRestrictions
+
+#check Quot.sound
+
+-- R x y => [x] = [y]

@@ -1,6 +1,6 @@
 
 import Coinduction.CompletePartialOrder
-import Coinduction.Embedding
+import Coinduction.Completion
 import Mathlib.Order.CompletePartialOrder
 import Mathlib.Data.Fintype.Basic
 import Mathlib.Data.Set.Finite
@@ -152,12 +152,12 @@ instance : OrderBot (FiniteContainer β) where
 
 -- Fₐᵒ
 abbrev FiniteConstructor (β : α → Type) (a : α) :=
-  {f : β a → FiniteContainer β // Set.Finite {a | f a ≠ ⊥}}
+  {f : β a → FiniteContainer β // Set.Finite (support f)}
 
 variable {a : α}
 
 instance {a : α} : Bot (FiniteConstructor β a) where
-  bot := ⟨fun _ => ⊥, by simp only [ne_eq, not_true, Set.setOf_false, Set.finite_empty]⟩
+  bot := ⟨fun _ => ⊥, by simp [support]⟩
 
 instance : OrderBot (FiniteConstructor β a) where
   bot_le := fun f b => FiniteContainer.bot_le
@@ -174,7 +174,7 @@ theorem FiniteContainer.coe_injective (c₁ c₂ : FiniteContainer β) : c₁ �
   . aesop?
 
 -- nodeₐᵒ  : Fₐᵒ → Cᵒ
-def node' (a : α) : FiniteConstructor β a → FiniteContainer β :=
+def node₀ (a : α) : FiniteConstructor β a → FiniteContainer β :=
   fun f => ⟨
     .node a (fun b => (f.1 b).1),
     by
@@ -188,15 +188,17 @@ def node' (a : α) : FiniteConstructor β a → FiniteContainer β :=
         assumption
   ⟩
 
-theorem node'_mono : Monotone (node' a (β := β)) :=
+theorem node₀_mono : Monotone (node₀ a (β := β)) :=
   fun _ _ hle => DefinitionOrder.node_le hle
 
-variable (C : Type) [AlgebraicCompletePartialOrder C] (Comp : AlgebraicCompletePartialOrder.Embedding (FiniteContainer β) C)
+variable (C : Type) [AlgebraicCompletePartialOrder C] (Comp : AlgebraicCompletePartialOrder.Completion (FiniteContainer β) C)
 
 abbrev Constructor (β : α → Type) (a : α) := β a → C
 
 instance : OrderBot (Constructor C β a) := inferInstance
 
-instance : CompletePartialOrder (Constructor C β a) := sorry
+instance : CompletePartialOrder (Constructor C β a) := inferInstance
 
-instance : AlgebraicCompletePartialOrder (Constructor C β a) := sorry
+#synth CompletePartialOrder (Constructor C β a)
+
+#synth AlgebraicCompletePartialOrder (Constructor C β a)
