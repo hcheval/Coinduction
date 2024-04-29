@@ -46,6 +46,20 @@ def Container.toList : Container.Stream α → List α
   | .bottom => []
   | .node a f => a :: (Container.toList <| f .unit)
 
+example (l : List α) : Container.toList (Container.ofList l) = l := by
+  induction l with
+  | nil => rfl
+  | cons h t ih =>
+    simpa [Container.ofList, Container.toList]
+
+example (c : Container.Stream α) : Container.ofList (Container.toList c) = c := by
+  induction c with
+  | bottom => rfl
+  | node a f ih =>
+    specialize ih ()
+    simp_all [Container.toList, Container.ofList]
+
+
 inductive Rose (α : Type) where
 | empty : Rose α
 | tree (n : ℕ) : α → (Fin n → Rose α) → Rose α
@@ -59,6 +73,18 @@ def Container.ofRose : _root_.Rose α → Container.Rose α
 def Container.toRose : Container.Rose α → _root_.Rose α
   | .bottom => .empty
   | .node n f => .tree n.1 n.2 (fun i => Container.toRose (f i))
+
+example (r : Rose α) : Container.toRose (Container.ofRose r) = r := by
+  induction r with
+  | empty => rfl
+  | tree n a t =>
+    simp_all [Container.toRose, Container.ofRose]
+
+example (c : Container.Rose α) : Container.ofRose (Container.toRose c) = c := by
+  induction c with
+  | bottom => rfl
+  | node n f =>
+    simp_all [Container.toRose, Container.ofRose]
 
 -- inductive T where
 -- | empty : T

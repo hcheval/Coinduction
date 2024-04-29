@@ -56,3 +56,6 @@ def sum (xs : List Int) : Int := Id.run do
 #check IO
 
 #eval sum [1, 2, 3]
+
+
+coinductive p

@@ -1,4 +1,5 @@
 import Coinduction.CompletePartialOrder
+import Coinduction.Ideal
 import Mathlib.Order.UpperLower.Basic
 import Mathlib.Data.Set.Finite
 import Mathlib.Order.Directed
@@ -13,9 +14,6 @@ class AlgebraicCompletePartialOrder (α : Type*) extends CompletePartialOrder α
   compacts_le_directed : ∀ a : α, DirectedOn (. ≤ .) (CompactsLe a)
 
 variable {α β : Type*} [AlgebraicCompletePartialOrder α] [AlgebraicCompletePartialOrder β]
-
--- def IsεδContinuous (f : α → β) : Prop :=
---   ∀ a : α, ∀ ε : β, IsCompactElement ε → ε ≤ f a → ∃ δ : α, IsCompactElement δ ∧ δ ≤ a ∧ ε ≤ f δ
 
 namespace AlgebraicCompletePartialOrder
 
@@ -40,6 +38,24 @@ example (a : α) : a ∈ upperBounds (CompactsLe a) := by
   cases h
   assumption
 
+def IsεδContinuous (f : α → β) : Prop :=
+  ∀ a : α, ∀ ε : β, IsCompactElement ε → ε ≤ f a → ∃ δ : α, IsCompactElement δ ∧ δ ≤ a ∧ ε ≤ f δ
+
+#check DirectedOn.IsLUB.sSup_eq
+#print IsCompactElement
+lemma εδ_continuous_of_continuous (f : α → β) (hcont : ScottContinuous f) : IsεδContinuous f := by
+  have hmono : Monotone f := hcont.monotone
+  intros a ε hcomp_ε h_e_le_fa
+  have h_a_eq_sup := AlgebraicCompletePartialOrder.compactly_generated a
+  have := CompletePartialOrder.scottContinuous.1 hcont (CompletePartialOrder.compacts_le_nonempty _) (AlgebraicCompletePartialOrder.compacts_le_directed a)
+  rw [← h_a_eq_sup] at this
+  have h_fcomp_dir : DirectedOn (. ≤ .) (f '' CompactsLe a) := (directedOn_image' f hcont (CompletePartialOrder.compacts_le_nonempty a) (compacts_le_directed a))
+  have : sSup (f '' CompactsLe a) = f a := DirectedOn.IsLUB.sSup_eq h_fcomp_dir this
+  rw [← this] at h_e_le_fa
+  have ⟨δ, ⟨hδ_mem, hδ_le⟩⟩ := hcomp_ε _ (h_fcomp_dir) (Set.nonempty_image_iff.2 (CompletePartialOrder.compacts_le_nonempty a)) h_e_le_fa
+  choose δ' hδ' using hδ_mem
+  use δ'
+  refine ⟨?_, ?_, ?_⟩
 
 
 
@@ -88,7 +104,7 @@ section
 end
 
 
-section Pi
+section Exponential
 
   variable {ι : Type} {α : Type} [AlgebraicCompletePartialOrder α]
 
@@ -204,4 +220,4 @@ section Pi
     compactly_generated := AlgebraicCompletePartialOrder.Pi.compactly_generated
     compacts_le_directed := AlgebraicCompletePartialOrder.Pi.compacts_le_directed
 
-end Pi
+end Exponential

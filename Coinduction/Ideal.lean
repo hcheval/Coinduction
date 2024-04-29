@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Order.Ideal
 
 instance {α : Type} [PartialOrder α] : PartialOrder (Order.Ideal α) := inferInstance
 
@@ -29,5 +29,3 @@ def IdealBot : Order.Ideal α := Order.Ideal.principal ⊥
 #synth OrderBot (Order.Ideal α)
 
 #synth PartialOrder (Order.Ideal α)
-
-

@@ -43,7 +43,7 @@ namespace CompletePartialOrder
   def IsCompactElement (a : α) : Prop :=
     ∀ d : Set α, DirectedOn (. ≤ .) d → d.Nonempty → a ≤ sSup d → ∃ a' ∈ d, a ≤ a'
 
-  def Compacts (α : Type*) [CompletePartialOrder α] := {a : α // IsCompactElement a}
+  def Compacts (α : Type*) [CompletePartialOrder α] := {a : α | IsCompactElement a}
 
   def CompactsLe (a : α) : Set α :=
     {a' : α | IsCompactElement a' ∧ a' ≤ a}
@@ -488,6 +488,25 @@ section FiniteRestrictions
 
 end FiniteRestrictions
 
-#check Quot.sound
 
--- R x y => [x] = [y]
+#check directedOn_image
+#check Set.range
+#check Set.nonempty_image_iff
+lemma directedOn_image' {α β} [CompletePartialOrder α] [CompletePartialOrder β] (f : α → β) (h : ScottContinuous f) :
+  ∀ ⦃d : Set α⦄, d.Nonempty → DirectedOn (. ≤ .) d → DirectedOn (. ≤ .) (f '' d) := by
+    intros d h_ne h_dir
+    intros a h_a_mem y h_y_mem
+    dsimp only
+    choose a' ha' using h_a_mem
+    choose y' hy' using h_y_mem
+    choose z hz using h_dir a' ha'.1 y' hy'.1
+    dsimp only at hz
+    use f z
+    refine ⟨?_, ?_, ?_⟩
+    . aesop?
+    . rw [← ha'.2]
+      apply h.monotone
+      exact hz.2.1
+    . rw [← hy'.2]
+      apply h.monotone
+      exact hz.2.2

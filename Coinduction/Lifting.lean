@@ -1,4 +1,4 @@
-import Coinduction.Embedding
+import Coinduction.Completion
 
 open CompletePartialOrder (IsCompactElement CompactsLe)
 
@@ -96,7 +96,7 @@ lemma lift_εδ_continuous : IsεδContinuous (lift f) := by
   exact le_trans h_le_b this
 
 lemma lift_continuous : Continuous (lift f) := by
-  
+
 
 section
 
@@ -107,8 +107,8 @@ section
 
   variable
     (f : α → β)
-    (e₁ : AlgebraicCompletePartialOrder.Embedding α α')
-    (e₂ : AlgebraicCompletePartialOrder.Embedding β β')
+    (e₁ : AlgebraicCompletePartialOrder.Completion α α')
+    (e₂ : AlgebraicCompletePartialOrder.Completion β β')
 
   @[simp] noncomputable def bot_ext : α' → β' :=
     fun a => if IsCompactElement a then e₂.toFun (f (e₁.invFun a)) else ⊥
@@ -126,36 +126,17 @@ section
   @[simp] noncomputable def lift_bot_ext: α' → β' :=
     lift (bot_ext f e₁ e₂)
 
--- i think i was stupid
-  -- lemma lift_bot_ext_lifting
-  --   (f_mono : Monotone f)
-  --   : Lifting (lift_bot_ext f e₁ e₂) := by
-  --   constructor
-  --   . intros a h_comp_a
-  --     unfold lift_bot_ext
-  --     rw [lift_extension _ h_comp_a, bot_ext_compact _ _ _ h_comp_a]
-  --     apply AlgebraicCompletePartialOrder.Embedding.to_fun_compact
-  --   . intros x₁ h_mem_x₁ x₂ h_mem_x₂ h_le
-  --     unfold lift_bot_ext
-  --     rw [lift_extension _ h_mem_x₁, bot_ext_compact _ _ _ h_mem_x₁]
-  --     rw [lift_extension _ h_mem_x₂, bot_ext_compact _ _ _ h_mem_x₂]
-  --     rw [← AlgebraicCompletePartialOrder.Embedding.to_fun_bimono]
-  --     apply f_mono
-  --     rw [← AlgebraicCompletePartialOrder.inv_fun_bimonotone _ _ _ h_mem_x₁ h_mem_x₂]
-  --     assumption
-  --   done
-
   lemma bot_ext_lifting :
     Monotone f → Lifting (bot_ext f e₁ e₂) := by
     intros f_mono
     constructor
     . intros a h_comp_a
       rw [bot_ext_compact _ _ _ h_comp_a]
-      apply AlgebraicCompletePartialOrder.Embedding.to_fun_compact
+      apply AlgebraicCompletePartialOrder.Completion.to_fun_compact
     . intros x₁ h_mem₁ x₂ h_mem₂ h_le
       rw [bot_ext_compact _ _ _ h_mem₁]
       rw [bot_ext_compact _ _ _ h_mem₂]
-      rw [← AlgebraicCompletePartialOrder.Embedding.to_fun_bimono]
+      rw [← AlgebraicCompletePartialOrder.Completion.to_fun_bimono]
       apply f_mono
       rw [← AlgebraicCompletePartialOrder.inv_fun_bimonotone _ _ _ h_mem₁ h_mem₂]
       assumption
